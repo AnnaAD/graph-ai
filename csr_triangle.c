@@ -12,7 +12,7 @@
 struct Graph
 {
     int nodes[MAX_NODES];
-    int edges[MAX_EDGES]
+    int edges[MAX_EDGES];
 } typedef G;
 
 struct Edge
@@ -29,13 +29,10 @@ G *buildGraph(E edges[], int n)
 
     printf("malloced\n");
 
+    int* degrees = calloc(MAX_NODES, sizeof(int));
     for (int i = 0; i < n; i++)
     {
         graph->nodes[edges[i].src] = 0;
-    }
-
-     for (int i = 0; i < n; i++)
-    {
         graph->edges[i] = 0;
     }
 
@@ -44,12 +41,28 @@ G *buildGraph(E edges[], int n)
     // getting degrees
     for (int i = 0; i < n; i++)
     {
-        //printf("adding to %d  (with %d)\n", edges[i].src, edges[i].dest);
-        for(int j = edges[i].src+1; j < MAX_NODES; j++) {
-            graph->nodes[j] += 1;
-        }
+        degrees[edges[i].src] += 1;
     }
 
+    //  for (int i = 0; i < MAX_NODES; i++)
+    // {        
+    //     printf("%d ",degrees[i]);
+    // }
+
+    int degSoFar = 0;
+    for (int i = 0; i < MAX_NODES; i++)
+    {        
+        graph->nodes[i] = degSoFar;
+        degSoFar += degrees[i];
+    }
+
+    // printf("<- degrees \n");
+    // for (int i = 0; i < MAX_NODES; i++)
+    // {        
+    //     printf("%d ",graph->nodes[i]);
+    // }
+    // printf("<- offsets \n");
+    free(degrees);
     printf(" set degrees .... \n");
 
     for(int i = 0; i < n; i++) {
