@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define MAX_NODES 11348900
 #define MAX_EDGES 29876240
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -11,8 +10,10 @@
 
 struct Graph
 {
-    int nodes[MAX_NODES];
-    int edges[MAX_EDGES];
+    int n;
+    int node_count;
+    int* nodes;
+    int* edges;
 } typedef G;
 
 struct Edge
@@ -21,55 +22,42 @@ struct Edge
     int dest; // src < dest always
 } typedef E;
 
-G *buildGraph(E edges[], int n)
+// builds graph with n edges and nodes number of nodes
+G *buildGraph(E edges[], int n, int nodes)
 {
-    printf("size: %d\n", n);
 
     G *graph = (G *)malloc(sizeof(G));
+    graph-> n = n;
+    graph->node_count = nodes;
+    graph->nodes = (int *)malloc(sizeof(int)*nodes);
+    graph->edges = (int *)malloc(sizeof(int)*n);
 
-    printf("malloced\n");
-
-    int* degrees = calloc(MAX_NODES, sizeof(int));
+    // pre-calculating getting degrees, clearing edges
+    int* degrees = calloc(nodes, sizeof(int));
     for (int i = 0; i < n; i++)
     {
-        graph->nodes[edges[i].src] = 0;
         graph->edges[i] = 0;
-    }
-
-    printf("cleared lists...\n");
-
-    // getting degrees
-    for (int i = 0; i < n; i++)
-    {
         degrees[edges[i].src] += 1;
     }
 
-    //  for (int i = 0; i < MAX_NODES; i++)
-    // {        
-    //     printf("%d ",degrees[i]);
-    // }
+    // clearing nodes 
+    for (int i = 0; i < graph->node_count; i++)
+    {
+        graph->nodes[i] = 0;
+    }
 
+    // calculating offsets for graph src list
     int degSoFar = 0;
-    for (int i = 0; i < MAX_NODES; i++)
+    for (int i = 0; i < graph->node_count; i++)
     {        
         graph->nodes[i] = degSoFar;
         degSoFar += degrees[i];
     }
 
-    // printf("<- degrees \n");
-    // for (int i = 0; i < MAX_NODES; i++)
-    // {        
-    //     printf("%d ",graph->nodes[i]);
-    // }
-    // printf("<- offsets \n");
     free(degrees);
-    printf(" set degrees .... \n");
 
+    // sorted insert of edges into adj. list of graph
     for(int i = 0; i < n; i++) {
-        // degree of the current node
-        //int deg = i+1 >= MAX_NODES ? MAX_EDGES - graph->nodes[i] :  graph->nodes[i+1] - graph->nodes[i];
-
-        //printf("inserting %d,%d", edges[i].src, edges[i].dest);
         int j = graph->nodes[edges[i].src];
         int toPlace = edges[i].dest;
         while(graph->edges[j] != 0) {
@@ -91,48 +79,42 @@ G *buildGraph(E edges[], int n)
 // Function to print adjacency list representation of a graph
 void printGraph(struct Graph *graph)
 {
-    for (int i = 0; i < MAX_NODES; i++)
+    for (int i = 0; i < graph->n; i++)
     {
         printf("NODE SRC: %d ", i);
         int offset = graph->nodes[i];
         // degree of the current node
-        int deg = i+1 >= MAX_NODES ? MAX_EDGES - graph->nodes[i] :  graph->nodes[i+1] - graph->nodes[i];
+        int deg = i+1 >= graph->n ? graph->n - graph->nodes[i] :  graph->nodes[i+1] - graph->nodes[i];
         for (int j = offset; j < offset + deg; j++) {
             printf("(%d — %d)\t", i, graph->edges[j]);
         }
         printf("\n");
     }
 
-    for (int i = 0; i < MAX_NODES; i++) {
+    for (int i = 0; i < graph->n; i++) {
         printf("%d ", graph->nodes[i]);
     }
     printf("\n");
 
-    for (int i = 0; i < MAX_EDGES; i++) {
+    for (int i = 0; i < graph->n; i++) {
         printf("%d ", graph->edges[i]);
     }
 }
 
 
-
-
-
+// 2 pointer method assumes sorted adj lists between node id i and j
 int intersect(G* graph, int i, int j) {
-    //printf("interseting node: %d and %d\n",i,j);
     int pointer1 = graph->nodes[i];
     int pointer2 = graph->nodes[j];
-    //printf("  start: %d and %d\n",pointer1,pointer2);
-    int max1 = i+1 >= MAX_NODES ? MAX_EDGES : graph->nodes[i+1];
-    int max2 = j+1 >= MAX_NODES ? MAX_EDGES : graph->nodes[j+1];
+    int max1 = i+1 >= graph->node_count ? graph->node_count : graph->nodes[i+1];
+    int max2 = j+1 >= graph->node_count ? graph->node_count : graph->nodes[j+1];
     int count = 0;
     while(pointer1 < max1 && pointer2 < max2) {
-        //printf("    comparing: %d and %d\n",graph->edges[pointer1], graph->edges[pointer2]);
         if(graph->edges[pointer1] < graph->edges[pointer2]) {
             pointer1++;
         } else if (graph->edges[pointer1] > graph->edges[pointer2]) {
             pointer2 ++;
         } else {
-            //printf("    found\n");
             count++;
             pointer1 +=1;
             pointer2 += 1;
@@ -144,7 +126,7 @@ int intersect(G* graph, int i, int j) {
 int findTriangles(G* graph, int i) {
     int output = 0;
     int offset = graph->nodes[i];
-    int deg = i+1 >= MAX_NODES ? MAX_EDGES - graph->nodes[i] :  graph->nodes[i+1] - graph->nodes[i];
+    int deg = i+1 >= graph->node_count ? graph->node_count - graph->nodes[i] :  graph->nodes[i+1] - graph->nodes[i];
     for(int j = offset; j < deg + offset; j++) {
         output += intersect(graph, i,graph->edges[j]);
     }
@@ -153,7 +135,7 @@ int findTriangles(G* graph, int i) {
 
 int seqTriangles(struct Graph* graph) {
     int count = 0;
-    for (int i = 0; i < MAX_NODES; i++)
+    for (int i = 0; i < graph->node_count; i++)
     {
         count += findTriangles(graph, i);
     }
@@ -167,8 +149,8 @@ int parallelTriangles(struct Graph* graph) {
         num_threads = omp_get_num_threads();
     }
     printf("threads: %d \n",num_threads);
-    #pragma omp parallel for reduction(+ : count) //schedule(dynamic, 1)
-    for (int i = 0; i < MAX_NODES; i++)
+    #pragma omp parallel for reduction(+ : count) //schedule(dynamic, 32)
+    for (int i = 0; i < graph->node_count; i++)
     {
         count += findTriangles(graph, i);
     }
@@ -177,12 +159,9 @@ int parallelTriangles(struct Graph* graph) {
 
 int main(int argc, char *argv[])
 {
-    int nthreads, tid;
-
-    struct Edge *edges = (struct Edge *)malloc(sizeof(struct Edge) * MAX_EDGES);
 
     FILE *in_file = fopen(argv[1], "r"); // read only
-    printf("%s\n", argv[1]);
+    printf("INPUT: %s\n", argv[1]);
 
     if (!in_file) // equivalent to saying if ( in_file == NULL )
     {
@@ -195,23 +174,24 @@ int main(int argc, char *argv[])
 
     for(int i = 0; i < 4; i++) {
         fscanf(in_file, "%*[^\n]\n");
-        printf("skip\n");
     }
 
+    struct Edge *edges = (struct Edge *)malloc(sizeof(struct Edge) * MAX_EDGES);
+
+    int maxId = 0;
     while (fscanf(in_file, "%d\t%d", &num1, &num2) == 2 && n < MAX_EDGES)
     {
         edges[n] = (struct Edge){MIN(num1, num2), MAX(num1, num2)};
         n += 1;
+        maxId = MAX(num1, maxId);
+        maxId = MAX(num2, maxId);
     }
 
-    printf("scanned edges! \n");
-    printf("outside n %d\n", n);
-
-    struct Graph *graph = buildGraph(edges, n);
-    printf("loaded graph\n");
+    struct Graph *graph = buildGraph(edges, n, maxId);
+    
+    printf("-- loaded graph --- \n");
 
     //printGraph(graph);
-    
 
     time_t start, end;
     start = clock(); 
